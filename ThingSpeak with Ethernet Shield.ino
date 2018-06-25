@@ -5,24 +5,29 @@ byte mac[] = {0xD4, 0x28, 0xB2, 0xFF, 0xA0, 0xA1}; // Must be unique on local ne
 
 char thingSpeakAddress[] = "api.thingspeak.com";
 String writeAPIKey = "PX3O6YJA1ZJELH0N";
-const int updateThingSpeakInterval = 16 * 1000;      // Time interval in milliseconds to update ThingSpeak (number of seconds * 1000 = interval)
-
-long lastConnectionTime = 0;
-boolean lastConnected = false;
 
 EthernetClient client;
 
 void setup()
 {
   Serial.begin(9600);
-  startEthernet();
+  client.stop();
+  Serial.println("Connecting Arduino to Network");
+  delay(1000);
+
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("DHCP Failed, Arduino Failed to Connect");
+  } else {
+    Serial.println("Arduino Connected to Network");
+  }
+  delay(1000);
 }
 
 void loop()
 {
-  int temp;
-  temp = analogRead(A0);
-  String analogValue0 = String(temp, DEC);
+  int lux;
+  lux = analogRead(A0);
+  String analogValue0 = String(lux, DEC);
 
   if (client.available())
   {
@@ -30,18 +35,11 @@ void loop()
     Serial.print(c);
   }
 
-  if (!client.connected() && lastConnected)
+  if (!client.connected())
   {
-    Serial.println("...disconnected");
     client.stop();
-  }
-
-  if (!client.connected() && (millis() - lastConnectionTime > updateThingSpeakInterval))
-  {
     updateThingSpeak("field1=" + analogValue0);
   }
-
-  lastConnected = client.connected();
 }
 
 void updateThingSpeak(String tsData)
@@ -58,32 +56,10 @@ void updateThingSpeak(String tsData)
     client.print("\n\n");
 
     client.print(tsData);
-
-    lastConnectionTime = millis();
-
+    delay(16000);
   }
   else
   {
     Serial.println("Connection to ThingSpeak Failed.");
-    lastConnectionTime = millis();
   }
-}
-
-void startEthernet()
-{
-  client.stop();
-  Serial.println("Connecting Arduino to network...");
-  delay(1000);
-
-  // Connect to network amd obtain an IP address using DHCP
-  if (Ethernet.begin(mac) == 0)
-  {
-    Serial.println("DHCP Failed, reset Arduino to try again");
-  }
-  else
-  {
-    Serial.println("Arduino connected to network using DHCP");
-  }
-  delay(1000);
-
 }
